@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Игровая валюта | Торговая площадка</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        :root {
+            --tg-theme-bg-color: #efeff3;
+            --tg-theme-button-color: #0088cc;
+            --tg-theme-button-text-color: #ffffff;
+        }
+        body {
+            font-family: 'Roboto', sans-serif;
+            margin: 0;
+            padding: 0;
+            background: var(--tg-theme-bg-color);
+            color: #222;
+        }
+        .container {
+            max-width: 100%;
+            padding: 15px;
+            box-sizing: border-box;
+        }
+        .game-card {
+            background: white;
+            border-radius: 12px;
+            padding: 15px;
+            margin-bottom: 15px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        .game-title {
+            font-size: 18px;
+            font-weight: 700;
+            margin-bottom: 10px;
+        }
+        .currency-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 0;
+            border-bottom: 1px solid #eee;
+        }
+        .buy-btn {
+            background: var(--tg-theme-button-color);
+            color: var(--tg-theme-button-text-color);
+            border: none;
+            padding: 8px 15px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 500;
+        }
+        .cart {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: var(--tg-theme-button-color);
+            color: white;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+            cursor: pointer;
+        }
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+        .modal-content {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            width: 90%;
+            max-width: 400px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎮 Торговая площадка</h1>
+        <p>Покупка игровой валюты с безопасной сделкой</p>
+
+        <div class="game-card">
+            <div class="game-title">World of Warcraft</div>
+            <div class="currency-item">
+                <span>1000 золота</span>
+                <button class="buy-btn" onclick="addToCart('wow', 1000, 50)">50 ₽</button>
+            </div>
+            <div class="currency-item">
+                <span>5000 золота</span>
+                <button class="buy-btn" onclick="addToCart('wow', 5000, 200)">200 ₽</button>
+            </div>
+        </div>
+
+        <div class="game-card">
+            <div class="game-title">CS:GO</div>
+            <div class="currency-item">
+                <span>1000 очков</span>
+                <button class="buy-btn" onclick="addToCart('csgo', 1000, 30)">30 ₽</button>
+            </div>
+            <div class="currency-item">
+                <span>5000 очков</span>
+                <button class="buy-btn" onclick="addToCart('csgo', 5000, 120)">120 ₽</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="cart" onclick="openCart()">
+        🛒
+        <span id="cart-counter" style="display:none; position:absolute; top:-5px; right:-5px; background:red; color:white; border-radius:50%; width:20px; height:20px; font-size:12px; display:flex; align-items:center; justify-content:center;">0</span>
+    </div>
+
+    <div class="modal" id="cart-modal">
+        <div class="modal-content">
+            <h2>Ваш заказ</h2>
+            <div id="cart-items"></div>
+            <p>Итого: <span id="total-price">0</span> ₽</p>
+            <button class="buy-btn" style="width:100%;" onclick="checkout()">Оформить заказ</button>
+        </div>
+    </div>
+
+    <script>
+        // Инициализация WebApp
+        Telegram.WebApp.expand();
+        Telegram.WebApp.enableClosingConfirmation();
+
+        let cart = [];
+
+        // Добавление в корзину
+        function addToCart(game, amount, price) {
+            cart.push({ game, amount, price });
+            updateCartCounter();
+            Telegram.WebApp.HapticFeedback.impactOccurred('light');
+        }
+
+        // Обновление счетчика корзины
+        function updateCartCounter() {
+            const counter = document.getElementById('cart-counter');
+            counter.textContent = cart.length;
+            counter.style.display = cart.length ? 'flex' : 'none';
+        }
+
+        // Открытие корзины
+        function openCart() {
+            const modal = document.getElementById('cart-modal');
+            const cartItems = document.getElementById('cart-items');
+
+            cartItems.innerHTML = '';
+            let total = 0;
+
+            cart.forEach((item, index) => {
+                total += item.price;
+                cartItems.innerHTML += `
+                    <div style="margin-bottom:10px; padding-bottom:10px; border-bottom:1px solid #eee;">
+                        <p>${item.game} - ${item.amount} ед.</p>
+                        <p>${item.price} ₽ <button onclick="removeFromCart(${index})" style="float:right; background:none; border:none; color:red;">✕</button></p>
+                    </div>
+                `;
+            });
+
+            document.getElementById('total-price').textContent = total;
+            modal.style.display = 'flex';
+        }
+
+        // Удаление из корзины
+        function removeFromCart(index) {
+            cart.splice(index, 1);
+            updateCartCounter();
+            openCart();
+        }
+
+        // Оформление заказа
+        function checkout() {
+            if (cart.length === 0) {
+                alert('Корзина пуста!');
+                return;
+            }
+
+            const orderData = {
+                user: Telegram.WebApp.initDataUnsafe.user,
+                cart: cart,
+                total: cart.reduce((sum, item) => sum + item.price, 0)
+            };
+
+            // Отправка данных в бота
+            Telegram.WebApp.sendData(JSON.stringify(orderData));
+
+            // Закрытие WebApp после отправки
+            setTimeout(() => Telegram.WebApp.close(), 500);
+        }
+    </script>
+</body>
+</html>
+
